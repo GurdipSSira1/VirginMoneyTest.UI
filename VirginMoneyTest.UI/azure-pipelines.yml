@@ -1,0 +1,131 @@
+stages:
+  - stage: Build
+    displayName: Build
+    jobs:
+      - job: Build_Job
+        displayName: Application Build
+        pool:
+          vmImage: windows-2022
+        steps:
+          - task: UsePythonVersion@0
+            displayName: Set Python 3 as default
+            inputs:
+              versionSpec: '3'
+              addToPath: true
+              architecture: x64
+          - script: pip install detect-secrets==1.0.3
+            displayName: Install detect-secrets using pip
+          - script: >
+              detect-secrets --version
+
+              detect-secrets scan --all-files --force-use-all-plugins >
+              $(Pipeline.Workspace)/detect-secrets.json
+            displayName: Run detect-secrets tool
+          - task: PowerShell@2
+            inputs:
+              targetType: inline
+              script: >
+                $dsjson = Get-Content $(Pipeline.Workspace)/detect-secrets.json
+
+                Write-Output $dsjson
+
+
+                $dsObj = $dsjson | ConvertFrom-Json
+
+                $count = ($dsObj.results | Get-Member -MemberType
+                NoteProperty).Count
+
+
+                if ($count -gt 0 ) { }
+                   #   $msg = "Secrets were detected in code. $count file(s) affected. "
+                   #  Write-Host "##vso[task.logissue type=error]$msg" #
+                   #Write-Host "##vso[task.complete result=Failed;]$msg"
+
+
+                else {
+                  Write-Host "##vso[task.complete result=Succeeded;]No secrets detected."
+                }
+            displayName: Analyzing detect-secrets results
+          - task: PublishPipelineArtifact@1
+            displayName: Publish results in the Pipeline Artifact
+            inputs:
+              targetPath: $(Pipeline.Workspace)/detect-secrets.json
+              artifact: detect-secrets-windows
+              publishLocation: pipeline
+          - task: DotNetCoreInstaller@1
+            displayName: Use DotNet Core SDK
+            inputs:
+              version: 6.x
+          - task: DotNetCoreCLI@2
+            displayName: dotnet build release
+            inputs:
+              command: build
+              projects: '**/*.sln'
+              arguments: '--configuration release'
+
+          - task: DotNetCoreCLI@2
+            displayName: Test
+            inputs:
+              command: test
+              projects: '**/*.UnitTests.csproj'
+              arguments: '--configuration Release'
+
+          - task: DotNetCoreCLI@2
+            inputs:
+              command: publish
+              publishWebProjects: true
+              arguments: '--configuration release --self-contained --os win  --output $(Build.BinariesDirectory)/Out'
+              zipAfterPublish: true
+          - task:  PublishPipelineArtifact@1
+            inputs:
+              targetPath: '$(Build.BinariesDirectory)/Out'
+              artifactName: 'VirginMoneyTechTest'
+              artifactType: 'pipeline'
+
+    #failOnStderr: false # Optional
+
+
+      - job: Deploy
+        dependsOn: Build_Job
+        condition: succeeded('Build_Job')
+        displayName: Deploy
+        pool:
+          vmImage: windows-latest
+        steps:
+        - task:  DownloadPipelineArtifact@2
+          inputs:
+            artifact: 'VirginMoneyTechTest'
+        #- task: ExtractFiles@1
+        #  inputs:
+        #    archiveFilePatterns: '$(Pipeline.Workspace)/**/*.zip'
+        #    destinationFolder: $(Build.SourcesDirectory)
+        #    cleanDestinationFolder: true
+        #    overwriteExistingFiles: false
+        #    pathToSevenZipTool:
+        - task: AzureWebApp@1
+          inputs:
+            azureSubscription: 'virginmoney-spn'
+            appName: 'virginmoneytechtest'
+            resourceGroupName: 'virginmoneytechtest'
+            package: '$(Pipeline.Workspace)/**/*.zip'
+        - task: PowerShell@2
+          inputs:
+            displayName: 'Print Hello World'
+            targetType: 'inline'
+            script: |
+
+              $Uri  = "https://virginmoneytechtest.azurewebsites.net/api/health"
+
+              $response = Invoke-RestMethod -Uri $Uri
+              $state = $response.status
+
+              Write-Host $response.status
+
+              if ( $response.status -ne "Healthy") { Write-Host "##vso[task.complete result=Succeeded;]Site healthy" }
+
+              else {
+                    Write-Host "##vso[task.logissue type=error]Site" #
+                    Write-Host "##vso[task.complete result=Failed;]Site"
+                   }
+
+
