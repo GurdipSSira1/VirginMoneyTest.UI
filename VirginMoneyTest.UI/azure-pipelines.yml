@@ -15,6 +15,7 @@ stages:
               architecture: x64
           - script: |
               dotnet tool install --global dotnet-outdated-tool
+              dotnet tool install -g dotnet-format
             displayName: Create Code coverage report
           - script: pip install detect-secrets==1.0.3
             displayName: Install detect-secrets using pip
