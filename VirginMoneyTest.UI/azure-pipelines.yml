@@ -20,6 +20,9 @@ stages:
           - script: |
               dotnet format --verify-no-changes
             displayName: Run dotnet-format
+          - script: |
+              dotnet outdated
+           displayName: Run dotnet-format
           - script: pip install detect-secrets==1.0.3
             displayName: Install detect-secrets using pip
           - script: pip install detect-secrets==1.0.3
@@ -104,13 +107,6 @@ stages:
         - task:  DownloadPipelineArtifact@2
           inputs:
             artifact: 'VirginMoneyTechTest'
-        #- task: ExtractFiles@1
-        #  inputs:
-        #    archiveFilePatterns: '$(Pipeline.Workspace)/**/*.zip'
-        #    destinationFolder: $(Build.SourcesDirectory)
-        #    cleanDestinationFolder: true
-        #    overwriteExistingFiles: false
-        #    pathToSevenZipTool:
         - task: AzureWebApp@1
           inputs:
             azureSubscription: 'virginmoney-spn'
@@ -130,7 +126,7 @@ stages:
 
               Write-Host $response.status
 
-              if ( $response.status -ne "Healthy") { Write-Host "##vso[task.complete result=Succeeded;]Site healthy" }
+              if ( $response.status -eq "Healthy") { Write-Host "##vso[task.complete result=Succeeded;]Site healthy" }
 
               else {
                     Write-Host "##vso[task.logissue type=error]Site" #
