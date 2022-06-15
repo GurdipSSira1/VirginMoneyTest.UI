@@ -18,7 +18,7 @@ stages:
               dotnet tool install -g dotnet-format
             displayName: Create Code coverage report
           - script: |
-              dotnet format
+              dotnet format --verify-no-changes
             displayName: Run dotnet-format
           - script: pip install detect-secrets==1.0.3
             displayName: Install detect-secrets using pip
