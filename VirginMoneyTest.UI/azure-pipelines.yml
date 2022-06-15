@@ -22,7 +22,7 @@ stages:
             displayName: Run dotnet-format
           - script: pip install detect-secrets==1.0.3
             displayName: Install detect-secrets using pip
-                      - script: pip install detect-secrets==1.0.3
+          - script: pip install detect-secrets==1.0.3
             displayName: Install detect-secrets using pip
           - script: >
               detect-secrets --version
