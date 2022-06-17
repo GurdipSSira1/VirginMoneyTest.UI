@@ -48,7 +48,7 @@ stages:
                 NoteProperty).Count
 
 
-                if ($count -gt 0 ) { }
+                if ($count -gt 0 ) { } # blah blah
                    #   $msg = "Secrets were detected in code. $count file(s) affected. "
                    #  Write-Host "##vso[task.logissue type=error]$msg" #
                    #Write-Host "##vso[task.complete result=Failed;]$msg"
